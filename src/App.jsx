@@ -1,0 +1,92 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import Login from './pages/Login';
+import AdminLayout from './components/layout/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import CompanyList from './pages/admin/CompanyList';
+import BranchList from './pages/admin/BranchList';
+import WarehouseList from './pages/admin/WarehouseList';
+import ZoneList from './pages/admin/ZoneList';
+import AisleList from './pages/admin/AisleList';
+import RackList from './pages/admin/RackList';
+import InventoryList from './pages/admin/InventoryList';
+import WorkerTasks from './pages/worker/Tasks';
+
+// Modern Placeholder Component for undefined routes
+const Placeholder = ({ title }) => (
+  <div className="flex flex-col items-center justify-center h-[70vh] text-center animate-fade-in">
+    <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 max-w-md w-full">
+      <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg className="w-10 h-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      </div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-3">{title}</h2>
+      <p className="text-gray-500">Bu alan henüz yapım aşamasındadır. Çok yakında devreye alınacaktır.</p>
+    </div>
+  </div>
+);
+
+export default function App() {
+  const { isAuthenticated, role, loading } = useAuth();
+
+  if (loading) return null; // Can be replaced with a full-screen spinner if needed
+
+  return (
+    <Routes>
+      <Route path="/login" element={
+        isAuthenticated ? <Navigate to="/" replace /> : <Login />
+      } />
+      
+      {/* Admin Routes Wrapped in AdminLayout */}
+      <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+        <Route element={<AdminLayout />}>
+          
+          <Route path="dashboard" element={<AdminDashboard />} />
+          
+          {/* Firma Yönetimi */}
+          <Route path="companies" element={<CompanyList />} />
+          <Route path="branches" element={<BranchList />} />
+          
+          {/* Depo & Lokasyon */}
+          <Route path="warehouses" element={<WarehouseList />} />
+          <Route path="zones" element={<ZoneList />} />
+          <Route path="aisles" element={<AisleList />} />
+          <Route path="racks" element={<RackList />} />
+          
+          {/* Envanter & Stok */}
+          <Route path="inventory" element={<InventoryList />} />
+          <Route path="stock" element={<Placeholder title="Anlık Stok Durumu" />} />
+          <Route path="stock-movements" element={<Placeholder title="Stok Hareketleri" />} />
+          
+          {/* Operasyon */}
+          <Route path="inbound" element={<Placeholder title="Mal Kabul" />} />
+          <Route path="picklists" element={<Placeholder title="Toplama Listeleri" />} />
+          <Route path="outbound" element={<Placeholder title="Sevkiyat" />} />
+          
+          {/* Organizasyon */}
+          <Route path="users" element={<Placeholder title="Çalışanlar" />} />
+          <Route path="roles" element={<Placeholder title="Roller & Yetkiler" />} />
+
+        </Route>
+      </Route>
+      
+      {/* Worker Routes */}
+      <Route path="/worker" element={<ProtectedRoute allowedRoles={['WORKER']} />}>
+        <Route path="tasks" element={<WorkerTasks />} />
+      </Route>
+
+      {/* Root Route Redirect Logic */}
+      <Route path="/" element={
+        !isAuthenticated ? <Navigate to="/login" replace /> :
+        role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> :
+        role === 'WORKER' ? <Navigate to="/worker/tasks" replace /> :
+        <Navigate to="/login" replace />
+      } />
+      
+      {/* Catch-all route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
