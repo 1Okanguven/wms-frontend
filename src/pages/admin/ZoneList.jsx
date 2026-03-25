@@ -9,6 +9,7 @@ export default function ZoneList() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Form state
   const [formData, setFormData] = useState({
     name: '',
     warehouseId: ''
@@ -26,7 +27,7 @@ export default function ZoneList() {
       setParents(parentsRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      toast.error('Veriler yüklenirken hata oluştu. (Zone)');
+      toast.error('Veriler yüklenirken hata oluştu.');
     } finally {
       setLoading(false);
     }
@@ -43,6 +44,7 @@ export default function ZoneList() {
       toast.success('Bölge başarıyla silindi.');
       fetchData();
     } catch (error) {
+      console.error('Failed to delete:', error);
       toast.error('Bölge silinirken hata oluştu.');
     }
   };
@@ -58,15 +60,18 @@ export default function ZoneList() {
     
     try {
       setIsSubmitting(true);
-      await api.post('/zone', {
+      const payload = {
         name: formData.name,
         warehouseId: formData.warehouseId
-      });
+      };
+      
+      await api.post('/zone', payload);
       toast.success('Bölge başarıyla eklendi.');
       setIsModalOpen(false);
       setFormData({ name: '', warehouseId: '' });
       fetchData();
     } catch (error) {
+      console.error('Failed to create:', error);
       toast.error('Bölge eklenirken hata oluştu.');
     } finally {
       setIsSubmitting(false);
@@ -75,86 +80,173 @@ export default function ZoneList() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Map className="h-6 w-6 text-blue-600" />
           Depo Bölgeleri
         </h1>
-        <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm text-sm font-medium">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm text-sm font-medium"
+        >
           <Plus className="h-4 w-4" />
           Yeni Bölge Ekle
         </button>
       </div>
 
+      {/* Table */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bölge Adı</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bağlı Depo</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">İşlemler</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bölge Adı</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bağlı Olduğu Depo</th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-                <tr><td colSpan="4" className="px-6 py-12 text-center"><div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></td></tr>
+                <tr>
+                  <td colSpan="4" className="px-6 py-12 text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </td>
+                </tr>
               ) : items.length > 0 ? (
                 items.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.id}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {item.warehouse?.name ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 font-medium">
-                          <Warehouse className="h-4 w-4" /> {item.warehouse.name}
-                        </span>
-                      ) : '-'}
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {item.warehouse?.name || '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right">
-                      <button onClick={() => handleDelete(item.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full"><Trash2 className="h-4 w-4" /></button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors inline-flex"
+                        title="Sil"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan="4" className="px-6 py-12 text-center text-gray-500">Henüz hiçbir bölge eklenmemiş.</td></tr>
+                <tr>
+                  <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center">
+                      <Map className="h-10 w-10 text-gray-300 mb-2" />
+                      <p>Henüz hiçbir bölge eklenmemiş.</p>
+                    </div>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Add Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-500 bg-opacity-75">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-gray-100 animate-fade-in">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-lg font-semibold flex items-center gap-2"><Map className="h-5 w-5 text-blue-600" /> Yeni Bölge Ekle</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:bg-gray-100 p-1.5 rounded-full"><X className="h-5 w-5" /></button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bağlı Depo <span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Warehouse className="h-5 w-5 text-gray-400" /></div>
-                    <select name="warehouseId" required value={formData.warehouseId} onChange={handleInputChange} className="block w-full rounded-lg border-gray-300 pl-10 py-2.5 text-gray-900 shadow-sm focus:ring-blue-500 border appearance-none">
-                      <option value="" disabled>Seçiniz</option>
-                      {parents.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"><ChevronDown className="h-4 w-4 text-gray-400" /></div>
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+              aria-hidden="true"
+              onClick={() => setIsModalOpen(false)}
+            ></div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            {/* Modal Panel */}
+            <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex justify-between items-center mb-5">
+                  <h3 className="text-lg leading-6 font-semibold text-gray-900 flex items-center gap-2" id="modal-title">
+                    <Map className="h-5 w-5 text-blue-600" />
+                    Yeni Bölge Ekle
+                  </h3>
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="text-gray-400 hover:text-gray-500 bg-gray-50 hover:bg-gray-100 p-1.5 rounded-full transition-colors focus:outline-none"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  
+                  {/* Depo ve Bölge Adı (Grid) */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="warehouseId" className="block text-sm font-medium text-gray-700 mb-1">
+                        Bağlı Olduğu Depo <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <Warehouse className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <select
+                          name="warehouseId"
+                          id="warehouseId"
+                          required
+                          value={formData.warehouseId}
+                          onChange={handleInputChange}
+                          className="block w-full rounded-lg border-gray-300 pl-10 py-2.5 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border bg-white appearance-none"
+                        >
+                          <option value="" disabled>Depo Seçiniz</option>
+                          {parents.map((parent) => (
+                            <option key={parent.id} value={String(parent.id)}>
+                              {parent.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                        Bölge Adı <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        id="name"
+                        required
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border"
+                        placeholder="Örn: A Bölgesi"
+                      />
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bölge Adı <span className="text-red-500">*</span></label>
-                  <input type="text" name="name" required value={formData.name} onChange={handleInputChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 p-2.5 border" placeholder="Örn: A Bölgesi" />
-                </div>
+
+                  {/* Submit / İptal butonları */}
+                  <div className="mt-6 sm:flex sm:flex-row-reverse border-t border-gray-100 pt-5">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2.5 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 transition-colors"
+                    >
+                      {isSubmitting ? 'Ekleniyor...' : 'Kaydet'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2.5 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+                    >
+                      İptal
+                    </button>
+                  </div>
+                </form>
               </div>
-              <div className="flex sm:flex-row-reverse gap-3 pt-5 border-t border-gray-100 mt-6">
-                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">{isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}</button>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50">İptal</button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

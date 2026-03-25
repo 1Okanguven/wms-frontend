@@ -11,6 +11,8 @@ import ZoneList from './pages/admin/ZoneList';
 import AisleList from './pages/admin/AisleList';
 import RackList from './pages/admin/RackList';
 import InventoryList from './pages/admin/InventoryList';
+import CategoryList from './pages/admin/CategoryList';
+import StockList from './pages/admin/StockList';
 import WorkerTasks from './pages/worker/Tasks';
 
 // Modern Placeholder Component for undefined routes
@@ -57,7 +59,8 @@ export default function App() {
           
           {/* Envanter & Stok */}
           <Route path="inventory" element={<InventoryList />} />
-          <Route path="stock" element={<Placeholder title="Anlık Stok Durumu" />} />
+          <Route path="categories" element={<CategoryList />} />
+          <Route path="stocks" element={<StockList />} />
           <Route path="stock-movements" element={<Placeholder title="Stok Hareketleri" />} />
           
           {/* Operasyon */}

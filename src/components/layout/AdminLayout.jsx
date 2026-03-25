@@ -42,8 +42,9 @@ const navigation = [
     name: 'Envanter & Stok',
     icon: PackageSearch,
     children: [
+      { name: 'Kategori Yönetimi', href: '/admin/categories' },
       { name: 'Ürün Kataloğu', href: '/admin/inventory' },
-      { name: 'Anlık Stok Durumu', href: '/admin/stock' },
+      { name: 'Anlık Stok Durumu', href: '/admin/stocks' },
       { name: 'Stok Hareketleri', href: '/admin/stock-movements' }
     ]
   },
