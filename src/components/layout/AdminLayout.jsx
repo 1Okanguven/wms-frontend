@@ -52,9 +52,9 @@ const navigation = [
     name: 'Operasyon',
     icon: ShoppingCart,
     children: [
-      { name: 'Mal Kabul', href: '/admin/inbound' },
-      { name: 'Toplama Listeleri', href: '/admin/picklists' },
-      { name: 'Sevkiyat', href: '/admin/outbound' }
+      { name: 'Mal Kabul', href: '/admin/receiving' },
+      { name: 'Toplama Listeleri', href: '/admin/picking-lists' },
+      { name: 'Sevkiyat', href: '/admin/shipping' }
     ]
   },
   {

@@ -13,6 +13,10 @@ import RackList from './pages/admin/RackList';
 import InventoryList from './pages/admin/InventoryList';
 import CategoryList from './pages/admin/CategoryList';
 import StockList from './pages/admin/StockList';
+import StockMovementList from './pages/admin/StockMovementList';
+import Receiving from './pages/admin/Receiving';
+import Shipping from './pages/admin/Shipping';
+import PickingLists from './pages/admin/PickingLists';
 import WorkerTasks from './pages/worker/Tasks';
 
 // Modern Placeholder Component for undefined routes
@@ -61,12 +65,13 @@ export default function App() {
           <Route path="inventory" element={<InventoryList />} />
           <Route path="categories" element={<CategoryList />} />
           <Route path="stocks" element={<StockList />} />
-          <Route path="stock-movements" element={<Placeholder title="Stok Hareketleri" />} />
+          <Route path="stock-movements" element={<StockMovementList />} />
           
           {/* Operasyon */}
-          <Route path="inbound" element={<Placeholder title="Mal Kabul" />} />
-          <Route path="picklists" element={<Placeholder title="Toplama Listeleri" />} />
-          <Route path="outbound" element={<Placeholder title="Sevkiyat" />} />
+          <Route path="receiving" element={<Receiving />} />
+          <Route path="inbound" element={<Receiving />} />
+          <Route path="picking-lists" element={<PickingLists />} />
+          <Route path="shipping" element={<Shipping />} />
           
           {/* Organizasyon */}
           <Route path="users" element={<Placeholder title="Çalışanlar" />} />
