@@ -141,6 +141,9 @@ export default function StockMovementList() {
                   Hedef Raf
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Hedef / Alıcı
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Referans No
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -151,13 +154,13 @@ export default function StockMovementList() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
+                  <td colSpan="8" className="px-6 py-12 text-center">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
+                  <td colSpan="8" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-red-500">
                       <svg className="h-10 w-10 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -169,7 +172,7 @@ export default function StockMovementList() {
                 </tr>
               ) : movements.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
+                  <td colSpan="8" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
                       <Activity className="h-10 w-10 text-gray-300" />
                       <p className="text-sm">Henüz stok hareketi kaydı bulunmuyor.</p>
@@ -211,8 +214,35 @@ export default function StockMovementList() {
                         <span className="text-gray-300">—</span>
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div className="flex flex-col gap-1">
+                        {movement.shipmentType && (
+                          <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            movement.shipmentType === 'INTERNAL' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {movement.shipmentType === 'INTERNAL' ? 'Şube' : 'Müşteri'}
+                          </span>
+                        )}
+                        <span className="font-medium text-gray-900">
+                          {movement.shipmentType === 'EXTERNAL' ? movement.customerName : movement.destination}
+                        </span>
+                        {movement.shipmentType === 'EXTERNAL' && movement.deliveryAddress && (
+                          <span className="text-[10px] text-gray-400 truncate max-w-[150px]" title={movement.deliveryAddress}>
+                            {movement.deliveryAddress}
+                          </span>
+                        )}
+                        {!movement.shipmentType && !movement.destination && <span className="text-gray-300">—</span>}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                      {movement.referenceNumber || <span className="text-gray-300">—</span>}
+                      <div className="flex flex-col">
+                        <span>{movement.referenceNumber || <span className="text-gray-300">—</span>}</span>
+                        {movement.trackingNumber && (
+                          <span className="text-[10px] text-blue-600 font-sans mt-0.5">
+                            Kargo: {movement.shippingCompany || ''} {movement.trackingNumber}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold ${
