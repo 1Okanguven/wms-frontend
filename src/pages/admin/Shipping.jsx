@@ -75,20 +75,29 @@ export default function Shipping() {
     }
   }, [formData.productId, inventories]);
 
-  // Şube seçildiğinde hedef depoları filtrele
+  // Şube seçildiğinde hedef depoları filtrele (ve aynı depoya sevkiyatı engelle)
   useEffect(() => {
     if (!formData.destination || formData.shipmentType !== 'INTERNAL') {
       setFilteredTargetWarehouses([]);
       return;
     }
-    const relevantWarehouses = warehouses.filter(
-      (wh) => wh.branch?.id === formData.destination
+
+    // Seçili rafın hangi depoda olduğunu bul (sourceWarehouseId)
+    const sourceInventory = inventories.find(
+      (inv) => inv.rack.id === formData.rackId
     );
+    const sourceWarehouseId = sourceInventory?.rack?.aisle?.zone?.warehouse?.id;
+
+    // Hedef şubeye bağlı depoları getir ama kaynak depoyu hariç tut
+    const relevantWarehouses = warehouses.filter(
+      (wh) => wh.branch?.id === formData.destination && wh.id !== sourceWarehouseId
+    );
+    
     setFilteredTargetWarehouses(relevantWarehouses);
     if (relevantWarehouses.length > 0 && !relevantWarehouses.find(wh => wh.id === formData.targetWarehouseId)) {
       setFormData(prev => ({ ...prev, targetWarehouseId: '' }));
     }
-  }, [formData.destination, formData.shipmentType, warehouses]);
+  }, [formData.destination, formData.shipmentType, warehouses, formData.rackId, inventories]);
 
   const selectedProduct = products.find((p) => p.id === formData.productId);
 

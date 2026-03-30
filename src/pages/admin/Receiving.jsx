@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { PackageCheck, Package, Layers, Hash, Calendar, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { PackageCheck, Package, Layers, Hash, Calendar, CheckCircle, ArrowRight, Truck, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -10,36 +10,104 @@ const initialForm = {
   lotNumber: '',
   productionDate: '',
   expirationDate: '',
+  transferId: '',
+  referenceNumber: '',
+  targetWarehouseId: '',
 };
 
 export default function Receiving() {
   const [products, setProducts] = useState([]);
   const [racks, setRacks] = useState([]);
+  const [pendingTransfers, setPendingTransfers] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingTransfers, setLoadingTransfers] = useState(false);
   const [formData, setFormData] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSuccess, setLastSuccess] = useState(null);
+  const [isFromTransfer, setIsFromTransfer] = useState(false);
 
-  useEffect(() => {
-    const fetchLists = async () => {
-      try {
-        const [productRes, rackRes] = await Promise.all([
-          api.get('/product'),
-          api.get('/rack'),
-        ]);
-        setProducts(productRes.data.data || productRes.data);
-        setRacks(rackRes.data);
-      } catch (err) {
-        console.error('Veriler yüklenemedi:', err);
-        toast.error('Ürün veya raf listesi yüklenemedi.');
-      } finally {
-        setLoadingData(false);
-      }
-    };
-    fetchLists();
+  const fetchLists = useCallback(async () => {
+    try {
+      setLoadingData(true);
+      const [productRes, rackRes] = await Promise.all([
+        api.get('/product'),
+        api.get('/rack'),
+      ]);
+      setProducts(productRes.data.data || productRes.data);
+      setRacks(rackRes.data);
+    } catch (err) {
+      console.error('Veriler yüklenemedi:', err);
+      toast.error('Ürün veya raf listesi yüklenemedi.');
+    } finally {
+      setLoadingData(false);
+    }
   }, []);
 
+  const fetchPendingTransfers = useCallback(async () => {
+    try {
+      setLoadingTransfers(true);
+      const response = await api.get('/transfer/pending/all'); 
+      setPendingTransfers(response.data);
+    } catch (err) {
+      console.error('Transferler yüklenemedi:', err);
+    } finally {
+      setLoadingTransfers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLists();
+    fetchPendingTransfers();
+  }, [fetchLists, fetchPendingTransfers]);
+
+  const handleSelectTransfer = (transfer) => {
+    const formatDateForInput = (dateStr) => {
+      if (!dateStr) return '';
+      // Eğer ISO string geliyorsa (T içeriyorsa), direkt YYYY-MM-DD kısmını al
+      if (typeof dateStr === 'string' && dateStr.includes('T')) {
+        return dateStr.split('T')[0];
+      }
+      // Date objesi veya diğer formatlar için yerel tarih bilgisini bozmadan çevir
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch (e) {
+        return '';
+      }
+    };
+
+    setFormData({
+      productId: transfer.product?.id || '',
+      rackId: '',
+      quantity: transfer.quantity || '',
+      lotNumber: transfer.lotNumber || '',
+      productionDate: formatDateForInput(transfer.productionDate),
+      expirationDate: formatDateForInput(transfer.expirationDate),
+      transferId: transfer.id,
+      referenceNumber: transfer.referenceNumber || '',
+      targetWarehouseId: transfer.targetWarehouse?.id || '',
+    });
+    setIsFromTransfer(true);
+    toast.success('Transfer bilgileri aktarıldı. Sadece hedef depodaki raflar listeleniyor.');
+  };
+
+  const resetTransferSelection = () => {
+    setFormData(initialForm);
+    setIsFromTransfer(false);
+  };
+
   const selectedProduct = products.find((p) => p.id === formData.productId);
+
+  const filteredRacks = isFromTransfer && formData.targetWarehouseId
+    ? racks.filter(r => {
+        const warehouseId = r.aisle?.zone?.warehouse?.id || r.warehouseId;
+        return warehouseId === formData.targetWarehouseId;
+      })
+    : racks;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -69,16 +137,22 @@ export default function Receiving() {
         lotNumber: formData.lotNumber || undefined,
         productionDate: formData.productionDate || undefined,
         expirationDate: formData.expirationDate || undefined,
+        transferId: formData.transferId || undefined,
       };
       await api.post('/receiving', payload);
+      
+      const targetRack = racks.find(r => r.id === formData.rackId);
       setLastSuccess({
         product: selectedProduct?.name,
         sku: selectedProduct?.sku,
-        rack: racks.find((r) => r.id === formData.rackId)?.name || racks.find((r) => r.id === formData.rackId)?.code,
+        rack: targetRack?.name || targetRack?.code,
         quantity: payload.quantity,
       });
-      toast.success('Mal kabul başarıyla tamamlandı! Stok ve hareket logu güncellendi.');
+      
+      toast.success('Mal kabul başarıyla tamamlandı!');
       setFormData(initialForm);
+      setIsFromTransfer(false);
+      fetchPendingTransfers();
     } catch (err) {
       const msg = err?.response?.data?.message || 'Mal kabul işlemi başarısız.';
       toast.error(msg);
@@ -102,16 +176,24 @@ export default function Receiving() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-emerald-50">
+            <div className="px-6 py-4 border-b border-gray-100 bg-emerald-50 flex justify-between items-center">
               <h2 className="text-sm font-semibold text-emerald-800 flex items-center gap-2">
                 <PackageCheck className="h-4 w-4" />
-                Mal Kabul Formu
+                {isFromTransfer ? 'İç Transfer Mal Kabulü' : 'Mal Kabul Formu'}
               </h2>
+              {isFromTransfer && (
+                <button 
+                  onClick={resetTransferSelection}
+                  className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 font-medium"
+                >
+                  <XCircle className="h-3 w-3" />
+                  İptal Et
+                </button>
+              )}
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {/* Ürün ve Raf */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Ürün */}
                 <div>
@@ -127,19 +209,16 @@ export default function Receiving() {
                       required
                       value={formData.productId}
                       onChange={handleChange}
-                      disabled={loadingData}
-                      className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-white appearance-none disabled:bg-gray-50"
+                      disabled={loadingData || isFromTransfer}
+                      className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-white disabled:bg-gray-100"
                     >
-                      <option value="" disabled>
-                        {loadingData ? 'Yükleniyor...' : 'Ürün Seçiniz'}
-                      </option>
+                      <option value="" disabled>Ürün Seçiniz</option>
                       {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.sku} — {p.name}
-                        </option>
+                        <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>
                       ))}
                     </select>
                   </div>
+                  {isFromTransfer && <p className="mt-1 text-[10px] text-blue-600 italic">* Ürün seçimi kilitlendi.</p>}
                 </div>
 
                 {/* Raf */}
@@ -156,24 +235,26 @@ export default function Receiving() {
                       required
                       value={formData.rackId}
                       onChange={handleChange}
-                      disabled={loadingData}
-                      className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-white appearance-none disabled:bg-gray-50"
+                      className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-white"
                     >
-                      <option value="" disabled>
-                        {loadingData ? 'Yükleniyor...' : 'Raf Seçiniz'}
-                      </option>
-                      {racks.map((r) => (
+                      <option value="" disabled>Raf Seçiniz</option>
+                      {filteredRacks.map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name || r.code}
+                          {r.name || r.code} {r.aisle?.zone?.warehouse?.name ? `(${r.aisle.zone.warehouse.name})` : ''}
                         </option>
                       ))}
                     </select>
                   </div>
+                  {isFromTransfer && (
+                    <p className="mt-1 text-[10px] text-amber-600 font-medium italic">
+                      * Sadece hedef depodaki raflar gösteriliyor.
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Miktar ve Lot */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Miktar */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Miktar <span className="text-red-500">*</span>
@@ -185,15 +266,15 @@ export default function Receiving() {
                     required
                     value={formData.quantity}
                     onChange={handleChange}
-                    placeholder="Örn: 100"
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                    disabled={isFromTransfer}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500 disabled:bg-gray-100"
                   />
+                  {isFromTransfer && <p className="mt-1 text-[10px] text-blue-600 italic">* Miktar kilitlendi.</p>}
                 </div>
+
+                {/* Lot */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lot / Parti Numarası
-                    <span className="ml-1 text-xs text-gray-400">(opsiyonel)</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lot / Parti</label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                       <Hash className="h-4 w-4 text-gray-400" />
@@ -203,22 +284,18 @@ export default function Receiving() {
                       name="lotNumber"
                       value={formData.lotNumber}
                       onChange={handleChange}
-                      placeholder="LOT-2026-001"
-                      className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                      disabled={isFromTransfer}
+                      className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500 disabled:bg-gray-100"
                     />
                   </div>
+                  {isFromTransfer && <p className="mt-1 text-[10px] text-blue-600 italic">* Parti No kilitlendi.</p>}
                 </div>
               </div>
 
-              {/* Tarihler — sadece ürün seçildiyse göster */}
               {formData.productId && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Üretim Tarihi — her zaman */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Üretim Tarihi
-                      <span className="ml-1 text-xs text-gray-400">(opsiyonel)</span>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Üretim Tarihi</label>
                     <div className="relative">
                       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <Calendar className="h-4 w-4 text-gray-400" />
@@ -228,18 +305,14 @@ export default function Receiving() {
                         name="productionDate"
                         value={formData.productionDate}
                         onChange={handleChange}
-                        className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-white"
+                        disabled={isFromTransfer}
+                        className="block w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-white disabled:bg-gray-100"
                       />
                     </div>
                   </div>
-
-                  {/* SKT — sadece hasExpiration === true */}
                   {selectedProduct?.hasExpiration && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Son Kullanma Tarihi (SKT){' '}
-                        <span className="text-red-500">*</span>
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">SKT <span className="text-red-500">*</span></label>
                       <div className="relative">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                           <Calendar className="h-4 w-4 text-red-400" />
@@ -250,7 +323,8 @@ export default function Receiving() {
                           required
                           value={formData.expirationDate}
                           onChange={handleChange}
-                          className="block w-full rounded-lg border border-red-200 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-red-500 focus:ring-red-500 bg-white"
+                          disabled={isFromTransfer}
+                          className="block w-full rounded-lg border border-red-200 pl-9 pr-3 py-2.5 text-sm shadow-sm focus:border-red-500 focus:ring-red-500 bg-white disabled:bg-gray-100"
                         />
                       </div>
                     </div>
@@ -258,12 +332,11 @@ export default function Receiving() {
                 </div>
               )}
 
-              {/* Submit */}
               <div className="pt-2 border-t border-gray-100">
                 <button
                   type="submit"
                   disabled={isSubmitting || loadingData}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
                 >
                   <PackageCheck className="h-4 w-4" />
                   {isSubmitting ? 'İşleniyor...' : 'Mal Kabul Et'}
@@ -271,46 +344,84 @@ export default function Receiving() {
               </div>
             </form>
           </div>
+
+          {/* Pending Transfers Table */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-amber-50 flex justify-between items-center">
+              <h2 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                Bekleyen İç Transferler (Yoldaki Mallar)
+              </h2>
+              <span className="text-xs font-bold text-amber-700">{pendingTransfers.length} TRANSFER</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase">Ürün / SKU</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase">Miktar</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase">Hedef Depo</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {loadingTransfers ? (
+                    <tr><td colSpan="4" className="px-4 py-4 text-center text-xs text-gray-400">Yükleniyor...</td></tr>
+                  ) : pendingTransfers.length === 0 ? (
+                    <tr><td colSpan="4" className="px-4 py-10 text-center text-xs text-gray-400">Bekleyen transfer bulunmuyor.</td></tr>
+                  ) : (
+                    pendingTransfers.map((t) => (
+                      <tr key={t.id} className="hover:bg-amber-50/50 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">{t.product?.name}</span>
+                            <span className="text-[10px] text-gray-500">{t.product?.sku}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-bold">{t.quantity}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
+                          {t.targetWarehouse?.name}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                          <button
+                            onClick={() => handleSelectTransfer(t)}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded"
+                          >
+                            Kabul Et <ArrowRight className="h-3 w-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
-        {/* Sağ Panel — Son İşlem & Bilgi */}
+        {/* Right Panel */}
         <div className="space-y-4">
-          {/* Son başarılı işlem */}
           {lastSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle className="h-5 w-5 text-emerald-600" />
-                <h3 className="text-sm font-semibold text-emerald-800">Son İşlem</h3>
+                <h3 className="text-sm font-semibold text-emerald-800">Son İşlem Başarılı</h3>
               </div>
               <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Ürün</span>
-                  <span className="font-medium text-gray-900">{lastSuccess.product}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">SKU</span>
-                  <span className="font-mono text-gray-700 text-xs">{lastSuccess.sku}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Raf</span>
-                  <span className="font-medium text-gray-900">{lastSuccess.rack}</span>
-                </div>
-                <div className="flex justify-between border-t border-emerald-200 pt-1.5 mt-1.5">
-                  <span className="text-gray-500">Eklenen Miktar</span>
-                  <span className="font-bold text-emerald-700">+{lastSuccess.quantity}</span>
-                </div>
+                <div className="flex justify-between"><span className="text-gray-500">Ürün:</span><span className="font-medium text-gray-900">{lastSuccess.product}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Raf:</span><span className="font-medium text-gray-900">{lastSuccess.rack}</span></div>
+                <div className="flex justify-between border-t border-emerald-200 pt-1.5 mt-1.5"><span className="text-gray-500">Miktar:</span><span className="font-bold text-emerald-700">+{lastSuccess.quantity}</span></div>
               </div>
             </div>
           )}
-
-          {/* Bilgi kutusu */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 space-y-2">
-            <p className="font-semibold text-blue-800">Nasıl çalışır?</p>
-            <ul className="space-y-1.5 text-xs text-blue-700 list-disc list-inside">
-              <li>Aynı ürün + raf + lot kombinasyonu varsa miktar <strong>eklenir</strong></li>
-              <li>Yoksa <strong>yeni stok satırı</strong> oluşturulur</li>
-              <li>Her işlemde otomatik olarak <strong>Stok Hareketi (Giriş)</strong> logu atılır</li>
-              <li>İşlem atomiktir — hata olursa hiçbir değişiklik kaydedilmez</li>
+            <p className="font-semibold text-blue-800">Bilgi</p>
+            <ul className="space-y-1 text-[11px] list-disc list-inside">
+              <li>Transfer seçiminde tüm ürün/tarih bilgileri korunur.</li>
+              <li>Raf seçimi sadece hedef depo ile sınırlıdır.</li>
+              <li>İşlem sonrası transfer kaydı otomatik olarak kapanır.</li>
             </ul>
           </div>
         </div>

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Box, X, Calendar, Hash, Layers, Package, MapPin } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Trash2, Box, X, Calendar, Hash, Layers, Package, MapPin, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -7,8 +7,13 @@ export default function StockList() {
   const [items, setItems] = useState([]);
   const [products, setProducts] = useState([]);
   const [racks, setRacks] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
   
   // Form state
   const [formData, setFormData] = useState({
@@ -24,12 +29,14 @@ export default function StockList() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [inventoryRes, productRes, rackRes] = await Promise.all([
+      const [inventoryRes, productRes, rackRes, warehouseRes] = await Promise.all([
         api.get('/inventory'),
         api.get('/product'),
-        api.get('/rack')
+        api.get('/rack'),
+        api.get('/warehouse')
       ]);
       setItems(inventoryRes.data);
+      setWarehouses(warehouseRes.data);
       // Backend api structure wrapper for product can sometimes be nested inside data.
       setProducts(productRes.data.data || productRes.data);
       setRacks(rackRes.data);
@@ -44,6 +51,19 @@ export default function StockList() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchesSearch = 
+        item.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.product?.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesWarehouse = !selectedWarehouseId || 
+        item.rack?.aisle?.zone?.warehouse?.id === selectedWarehouseId;
+      
+      return matchesSearch && matchesWarehouse;
+    });
+  }, [items, searchQuery, selectedWarehouseId]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Bu stok kaydını tamamen silmek istediğinizden emin misiniz?')) return;
@@ -140,12 +160,53 @@ export default function StockList() {
         </button>
       </div>
 
+      {/* Control Toolbar */}
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+        {/* Search */}
+        <div className="w-full md:w-72 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Ürün adı veya SKU ile ara..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+          />
+        </div>
+
+        {/* Warehouse Filter */}
+        <div className="w-full md:w-64 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MapPin className="h-4 w-4 text-gray-400" />
+          </div>
+          <select
+            value={selectedWarehouseId}
+            onChange={(e) => setSelectedWarehouseId(e.target.value)}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all appearance-none"
+          >
+            <option value="">Tüm Depolar</option>
+            {warehouses.map(wh => (
+              <option key={wh.id} value={wh.id}>
+                {wh.branch?.name} - {wh.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="text-xs text-gray-500 md:ml-auto">
+          Gösterilen: <span className="font-semibold text-gray-900">{filteredItems.length}</span> / {items.length} kayıt
+        </div>
+      </div>
+
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU / Ürün Adı</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Şube / Depo</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lokasyon (Raf)</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Miktar & Birim</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lot Numarası</th>
@@ -157,17 +218,27 @@ export default function StockList() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
+                  <td colSpan="8" className="px-6 py-12 text-center">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </td>
                 </tr>
-              ) : items.length > 0 ? (
-                items.map((item) => (
+              ) : filteredItems.length > 0 ? (
+                filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-gray-900">{item.product?.name || '-'}</span>
                         <span className="text-xs text-gray-500 font-mono mt-0.5">{item.product?.sku || '-'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900">
+                          {item.rack?.aisle?.zone?.warehouse?.branch?.name || '-'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {item.rack?.aisle?.zone?.warehouse?.name || '-'}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -203,10 +274,10 @@ export default function StockList() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center">
                       <Box className="h-10 w-10 text-gray-300 mb-2" />
-                      <p>Depoda ürün (stok) bulunamadı.</p>
+                      <p>{searchQuery || selectedWarehouseId ? 'Aramanızla eşleşen stok bulunamadı.' : 'Depoda ürün (stok) bulunamadı.'}</p>
                     </div>
                   </td>
                 </tr>
