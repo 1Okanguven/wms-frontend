@@ -22,6 +22,7 @@ export default function Shipping() {
   const [allRacks, setAllRacks] = useState([]);
   const [inventories, setInventories] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+  const [shippableWarehouses, setShippableWarehouses] = useState([]);
   const [branches, setBranches] = useState([]);
   
   const [filteredRacks, setFilteredRacks] = useState([]);
@@ -35,12 +36,13 @@ export default function Shipping() {
   useEffect(() => {
     const fetchLists = async () => {
       try {
-        const [productRes, rackRes, branchRes, invRes, whRes] = await Promise.all([
+        const [productRes, rackRes, branchRes, invRes, whRes, shippableRes] = await Promise.all([
           api.get('/product'),
           api.get('/rack'),
           api.get('/branch'),
           api.get('/inventory'),
           api.get('/warehouse'),
+          api.get('/warehouse/shippable'),
         ]);
         
         setProducts(productRes.data.data || productRes.data);
@@ -48,6 +50,7 @@ export default function Shipping() {
         setBranches(branchRes.data.data || branchRes.data);
         setInventories(invRes.data);
         setWarehouses(whRes.data);
+        setShippableWarehouses(shippableRes.data);
         
       } catch (err) {
         console.error('Veriler yüklenemedi:', err);
@@ -89,7 +92,8 @@ export default function Shipping() {
     const sourceWarehouseId = sourceInventory?.rack?.aisle?.zone?.warehouse?.id;
 
     // Hedef şubeye bağlı depoları getir ama kaynak depoyu hariç tut
-    const relevantWarehouses = warehouses.filter(
+    // Sadece shippable (rafı olan) depoları kullan
+    const relevantWarehouses = shippableWarehouses.filter(
       (wh) => wh.branch?.id === formData.destination && wh.id !== sourceWarehouseId
     );
     
@@ -97,7 +101,7 @@ export default function Shipping() {
     if (relevantWarehouses.length > 0 && !relevantWarehouses.find(wh => wh.id === formData.targetWarehouseId)) {
       setFormData(prev => ({ ...prev, targetWarehouseId: '' }));
     }
-  }, [formData.destination, formData.shipmentType, warehouses, formData.rackId, inventories]);
+  }, [formData.destination, formData.shipmentType, shippableWarehouses, formData.rackId, inventories]);
 
   const selectedProduct = products.find((p) => p.id === formData.productId);
 

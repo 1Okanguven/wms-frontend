@@ -100,6 +100,19 @@ export default function Receiving() {
     setIsFromTransfer(false);
   };
 
+  const handleCancelTransfer = async (id) => {
+    if (!window.confirm('Bu transferi iptal etmek ve ürünleri kaynak rafa iade etmek istediğinizden emin misiniz?')) return;
+    
+    try {
+      await api.patch(`/transfer/${id}/cancel`);
+      toast.success('Transfer iptal edildi, ürünler kaynak rafa iade edildi.');
+      fetchPendingTransfers();
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'İptal işlemi başarısız.';
+      toast.error(msg);
+    }
+  };
+
   const selectedProduct = products.find((p) => p.id === formData.productId);
 
   const filteredRacks = isFromTransfer && formData.targetWarehouseId
@@ -384,10 +397,18 @@ export default function Receiving() {
                         <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
                           {t.targetWarehouse?.name}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <td className="px-4 py-3 whitespace-nowrap text-right space-x-2">
+                          <button
+                            onClick={() => handleCancelTransfer(t.id)}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 text-[10px] font-bold rounded transition-colors border border-red-100"
+                            title="Transferi İptal Et"
+                          >
+                            <XCircle className="h-3 w-3" />
+                            İptal
+                          </button>
                           <button
                             onClick={() => handleSelectTransfer(t)}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded"
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded transition-colors"
                           >
                             Kabul Et <ArrowRight className="h-3 w-3" />
                           </button>

@@ -3,6 +3,36 @@ import { Plus, Trash2, Package, X, Building2, Tags, ChevronDown } from 'lucide-r
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
+const SKU_PREFIX_MAP = {
+  'ELEKTRONIK': 'ELK',
+  'GIDA': 'GDA',
+  'MOBILYA': 'MOB',
+  'GIYIM': 'GYM',
+  'KOZMETIK': 'KOZ',
+  'HIRDAVAT': 'HRD'
+};
+
+const generateSkuPrefix = (categoryName) => {
+  if (!categoryName) return '';
+
+  // Türkçe karakter dönüşümü
+  const charMap = {
+    'ç': 'c', 'ğ': 'g', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'ş': 's', 'ü': 'u',
+    'Ç': 'C', 'Ğ': 'G', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U'
+  };
+  
+  let processed = categoryName.split('').map(char => charMap[char] || char).join('').toUpperCase();
+
+  // Map içinde varsa döndür
+  if (SKU_PREFIX_MAP[processed]) return SKU_PREFIX_MAP[processed];
+
+  // Fallback: Sesli harfleri at ve ilk 3 harfi/sessiz harfi al
+  let consonants = processed.replace(/[AEIOU]/g, '');
+  if (consonants.length >= 3) return consonants.substring(0, 3);
+  
+  return processed.substring(0, 3);
+};
+
 export default function InventoryList() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -58,11 +88,36 @@ export default function InventoryList() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    let { name, value, type, checked } = e.target;
+    
+    // Validasyonlar ve Dönüşümler
+    if (name === 'barcode') {
+      // Sadece rakam kabul et ve max 13 hane
+      value = value.replace(/\D/g, '').substring(0, 13);
+    }
+
+    if (name === 'sku') {
+      // Büyük harf yap ve boşlukları tireye çevir
+      value = value.toUpperCase().replace(/\s+/g, '-');
+    }
+
+    setFormData(prev => {
+      const nextData = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      };
+
+      // Kategori değiştiğinde otomatik SKU Öneki üret
+      if (name === 'categoryId') {
+        const selectedCat = categories.find(c => c.id === value);
+        if (selectedCat) {
+          const prefix = generateSkuPrefix(selectedCat.name);
+          nextData.sku = `${prefix}-`;
+        }
+      }
+
+      return nextData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -297,8 +352,9 @@ export default function InventoryList() {
                         value={formData.sku}
                         onChange={handleInputChange}
                         className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border"
-                        placeholder="Örn: PRD-001"
+                        placeholder="Örn: ELK-001"
                       />
+                      <p className="mt-1 text-[10px] text-gray-400 italic">Kategori seçildiğinde otomatik önek eklenir.</p>
                     </div>
 
                     <div>
@@ -328,11 +384,13 @@ export default function InventoryList() {
                         type="text"
                         name="barcode"
                         id="barcode"
+                        maxLength={13}
                         value={formData.barcode}
                         onChange={handleInputChange}
                         className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border"
                         placeholder="Örn: 8690123456789"
                       />
+                      <p className="mt-1 text-[10px] text-gray-500 font-medium italic">13 haneli EAN-13 standardı (Sadece rakam)</p>
                     </div>
 
                     <div>

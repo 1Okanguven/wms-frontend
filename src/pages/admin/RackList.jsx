@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Layers, X, Columns, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Trash2, Layers, X, Columns, ChevronDown, Search, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
 export default function RackList() {
   const [items, setItems] = useState([]);
   const [parents, setParents] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
   
   // Form state
   const [formData, setFormData] = useState({
@@ -19,12 +24,14 @@ export default function RackList() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [itemsRes, parentsRes] = await Promise.all([
+      const [itemsRes, parentsRes, warehouseRes] = await Promise.all([
         api.get('/rack'),
-        api.get('/aisle')
+        api.get('/aisle'),
+        api.get('/warehouse')
       ]);
       setItems(itemsRes.data);
       setParents(parentsRes.data);
+      setWarehouses(warehouseRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Veriler yüklenirken hata oluştu.');
@@ -36,6 +43,15 @@ export default function RackList() {
   useEffect(() => {
     fetchData();
   }, []);
+  
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const itemName = item.name || item.code || '';
+      const matchesSearch = itemName.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesWarehouse = !selectedWarehouseId || item.aisle?.zone?.warehouse?.id === selectedWarehouseId;
+      return matchesSearch && matchesWarehouse;
+    });
+  }, [items, searchQuery, selectedWarehouseId]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Bu rafı silmek istediğinizden emin misiniz?')) return;
@@ -50,7 +66,10 @@ export default function RackList() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+    if (name === 'name') {
+      value = value.toUpperCase().replace(/\s+/g, '-');
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -94,6 +113,46 @@ export default function RackList() {
         </button>
       </div>
 
+      {/* Control Toolbar */}
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+        {/* Search */}
+        <div className="w-full md:w-72 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Raf adıyla ara..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+          />
+        </div>
+
+        {/* Warehouse Filter */}
+        <div className="w-full md:w-64 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MapPin className="h-4 w-4 text-gray-400" />
+          </div>
+          <select
+            value={selectedWarehouseId}
+            onChange={(e) => setSelectedWarehouseId(e.target.value)}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all appearance-none"
+          >
+            <option value="">Tüm Depolar</option>
+            {warehouses.map(wh => (
+              <option key={wh.id} value={wh.id}>
+                {wh.branch?.name} - {wh.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="text-xs text-gray-500 md:ml-auto">
+          Gösterilen: <span className="font-semibold text-gray-900">{filteredItems.length}</span> / {items.length} kayıt
+        </div>
+      </div>
+
       {/* Table */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -113,8 +172,8 @@ export default function RackList() {
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </td>
                 </tr>
-              ) : items.length > 0 ? (
-                items.map((item) => (
+              ) : filteredItems.length > 0 ? (
+                filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
@@ -137,7 +196,7 @@ export default function RackList() {
                   <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center">
                       <Layers className="h-10 w-10 text-gray-300 mb-2" />
-                      <p>Henüz hiçbir raf eklenmemiş.</p>
+                      <p>{searchQuery || selectedWarehouseId ? 'Aramanızla eşleşen raf bulunamadı.' : 'Henüz hiçbir raf eklenmemiş.'}</p>
                     </div>
                   </td>
                 </tr>
@@ -214,16 +273,20 @@ export default function RackList() {
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                         Raf Adı <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        name="name"
-                        id="name"
-                        required
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border"
-                        placeholder="Örn: R1-A"
-                      />
+                        <input
+                          type="text"
+                          name="name"
+                          id="name"
+                          required
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border"
+                          placeholder="Örn: RAF-A12"
+                        />
+                        <p className="mt-1 text-[10px] text-gray-500 italic">
+                          Sadece büyük harf ve rakam kullanın. Boşluklar otomatik olarak tireye (-) dönüşür. 
+                          <span className="block mt-0.5 font-medium">Örn: RAF-A12, R1-S5</span>
+                        </p>
                     </div>
                   </div>
 
