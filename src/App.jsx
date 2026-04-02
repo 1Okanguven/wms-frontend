@@ -19,7 +19,7 @@ import Shipping from './pages/admin/Shipping';
 import PickingLists from './pages/admin/PickingLists';
 import WorkerTasks from './pages/worker/Tasks';
 
-// Modern Placeholder Component for undefined routes
+
 const Placeholder = ({ title }) => (
   <div className="flex flex-col items-center justify-center h-[70vh] text-center animate-fade-in">
     <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 max-w-md w-full">
@@ -37,7 +37,7 @@ const Placeholder = ({ title }) => (
 export default function App() {
   const { isAuthenticated, role, loading } = useAuth();
 
-  if (loading) return null; // Can be replaced with a full-screen spinner if needed
+  if (loading) return null;
 
   return (
     <Routes>
@@ -45,47 +45,47 @@ export default function App() {
         isAuthenticated ? <Navigate to="/" replace /> : <Login />
       } />
       
-      {/* Admin Routes Wrapped in AdminLayout */}
+
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
         <Route element={<AdminLayout />}>
           
           <Route path="dashboard" element={<AdminDashboard />} />
           
-          {/* Firma Yönetimi */}
+
           <Route path="companies" element={<CompanyList />} />
           <Route path="branches" element={<BranchList />} />
           
-          {/* Depo & Lokasyon */}
+
           <Route path="warehouses" element={<WarehouseList />} />
           <Route path="zones" element={<ZoneList />} />
           <Route path="aisles" element={<AisleList />} />
           <Route path="racks" element={<RackList />} />
           
-          {/* Envanter & Stok */}
+
           <Route path="inventory" element={<InventoryList />} />
           <Route path="categories" element={<CategoryList />} />
           <Route path="stocks" element={<StockList />} />
           <Route path="stock-movements" element={<StockMovementList />} />
           
-          {/* Operasyon */}
+
           <Route path="receiving" element={<Receiving />} />
           <Route path="inbound" element={<Receiving />} />
           <Route path="picking-lists" element={<PickingLists />} />
           <Route path="shipping" element={<Shipping />} />
           
-          {/* Organizasyon */}
+
           <Route path="users" element={<Placeholder title="Çalışanlar" />} />
           <Route path="roles" element={<Placeholder title="Roller & Yetkiler" />} />
 
         </Route>
       </Route>
       
-      {/* Worker Routes */}
+
       <Route path="/worker" element={<ProtectedRoute allowedRoles={['WORKER']} />}>
         <Route path="tasks" element={<WorkerTasks />} />
       </Route>
 
-      {/* Root Route Redirect Logic */}
+
       <Route path="/" element={
         !isAuthenticated ? <Navigate to="/login" replace /> :
         role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> :
@@ -93,7 +93,7 @@ export default function App() {
         <Navigate to="/login" replace />
       } />
       
-      {/* Catch-all route */}
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

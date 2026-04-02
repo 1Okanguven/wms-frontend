@@ -8,7 +8,7 @@ const initialForm = {
   rackId: '',
   quantity: '',
   shipmentType: 'INTERNAL',
-  destination: '', // Şube ID olarak tutulacak
+  destination: '',
   targetWarehouseId: '',
   customerName: '',
   deliveryAddress: '',
@@ -62,7 +62,6 @@ export default function Shipping() {
     fetchLists();
   }, []);
 
-  // Ürün seçildiğinde raf listesini filtrele
   useEffect(() => {
     if (!formData.productId) {
       setFilteredRacks([]);
@@ -72,27 +71,22 @@ export default function Shipping() {
       (inv) => inv.product.id === formData.productId && inv.quantity > 0
     );
     setFilteredRacks(relevantInvs);
-    // Eğer mevcut seçili raf bu yeni listede yoksa sıfırla
     if (relevantInvs.length > 0 && !relevantInvs.find(inv => inv.rack.id === formData.rackId)) {
       setFormData(prev => ({ ...prev, rackId: '' }));
     }
   }, [formData.productId, inventories]);
 
-  // Şube seçildiğinde hedef depoları filtrele (ve aynı depoya sevkiyatı engelle)
   useEffect(() => {
     if (!formData.destination || formData.shipmentType !== 'INTERNAL') {
       setFilteredTargetWarehouses([]);
       return;
     }
 
-    // Seçili rafın hangi depoda olduğunu bul (sourceWarehouseId)
     const sourceInventory = inventories.find(
       (inv) => inv.rack.id === formData.rackId
     );
     const sourceWarehouseId = sourceInventory?.rack?.aisle?.zone?.warehouse?.id;
 
-    // Hedef şubeye bağlı depoları getir ama kaynak depoyu hariç tut
-    // Sadece shippable (rafı olan) depoları kullan
     const relevantWarehouses = shippableWarehouses.filter(
       (wh) => wh.branch?.id === formData.destination && wh.id !== sourceWarehouseId
     );
@@ -173,7 +167,6 @@ export default function Shipping() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Truck className="h-6 w-6 text-orange-600" />
@@ -185,7 +178,6 @@ export default function Shipping() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form Panel */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-orange-50">
@@ -195,8 +187,6 @@ export default function Shipping() {
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              
-              {/* Sevkiyat Türü Seçimi */}
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <label className="block text-sm font-semibold text-gray-700 mb-3 text-center uppercase tracking-wider">
                   Sevkiyat Türü
@@ -231,9 +221,7 @@ export default function Shipping() {
                 </div>
               </div>
 
-              {/* Ürün ve Raf Seçimi (Zincirleme) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Ürün */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Ürün <span className="text-red-500">*</span>
@@ -262,7 +250,6 @@ export default function Shipping() {
                   </div>
                 </div>
 
-                {/* Raf */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Raf (Stok Bulunan Lokasyonlar) <span className="text-red-500">*</span>
@@ -292,7 +279,6 @@ export default function Shipping() {
                 </div>
               </div>
 
-              {/* Miktar */}
               <div className="max-w-xs">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Miktar <span className="text-red-500">*</span>
@@ -309,10 +295,8 @@ export default function Shipping() {
                 />
               </div>
 
-              {/* Tür bazlı Dinamik Alanlar */}
               <div className="pt-2">
                 {formData.shipmentType === 'INTERNAL' ? (
-                  /* INTERNAL: Şube ve Depo Zinciri */
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -355,7 +339,6 @@ export default function Shipping() {
                     </div>
                   </div>
                 ) : (
-                  /* EXTERNAL: Müşteri Bilgileri */
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
@@ -452,7 +435,6 @@ export default function Shipping() {
                 )}
               </div>
 
-              {/* Uyarı notu */}
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-600" />
                 <span>
@@ -460,7 +442,6 @@ export default function Shipping() {
                 </span>
               </div>
 
-              {/* Submit Butonu */}
               <div className="pt-2 border-t border-gray-100">
                 <button
                   type="submit"
@@ -475,9 +456,7 @@ export default function Shipping() {
           </div>
         </div>
 
-        {/* Sağ Panel (Özet) */}
         <div className="space-y-4">
-          {/* Son başarılı işlem */}
           {lastSuccess && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="flex items-center gap-2 mb-3">
@@ -513,7 +492,6 @@ export default function Shipping() {
             </div>
           )}
 
-          {/* Bilgi kutusu */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 space-y-2">
             <p className="font-semibold text-blue-800">Nasıl çalışır?</p>
             <ul className="space-y-1.5 text-xs text-blue-700 list-disc list-inside">

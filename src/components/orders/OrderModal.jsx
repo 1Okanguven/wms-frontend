@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, Building2, Package, ShoppingCart, Plus, Trash2, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { X, Building2, Package, ShoppingCart, Trash2, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
 export default function OrderModal({ isOpen, onClose, onSuccess }) {
-  const [step, setStep] = useState(1);
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseId, setWarehouseId] = useState('');
-  const [availableProducts, setAvailableProducts] = useState([]); // Depodaki benzersiz ürünler
+  const [availableProducts, setAvailableProducts] = useState([]);
   const [customerName, setCustomerName] = useState('');
+  const [orderNote, setOrderNote] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,9 +21,9 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
   }, [isOpen]);
 
   const resetForm = () => {
-    setStep(1);
     setWarehouseId('');
     setCustomerName('');
+    setOrderNote('');
     setSelectedItems([]);
     setAvailableProducts([]);
   };
@@ -37,16 +37,14 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  const handleWarehouseSubmit = async (e) => {
-    e.preventDefault();
-    if (!warehouseId) return toast.error('Lütfen önce bir depo seçiniz.');
+  const handleWarehouseSelect = async (id) => {
+    setWarehouseId(id);
+    setAvailableProducts([]);
+    setSelectedItems([]);
     
     setLoading(true);
     try {
-      // Depodaki tüm stokları çek
-      const res = await api.get(`/inventory/warehouse/${warehouseId}`);
-      
-      // Stok bazlı benzersiz ürün listesi oluştur
+      const res = await api.get(`/inventory/warehouse/${id}`);
       const productsMap = {};
       res.data.forEach(item => {
         if (!productsMap[item.product.id]) {
@@ -57,9 +55,7 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
         }
         productsMap[item.product.id].totalStock += item.quantity;
       });
-      
       setAvailableProducts(Object.values(productsMap).filter(p => p.totalStock > 0));
-      setStep(2);
     } catch (error) {
       toast.error('Depo stokları alınamadı.');
     } finally {
@@ -101,13 +97,15 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedItems.length === 0) return toast.error('Lütfen en az bir ürün ekleyin.');
+    if (!warehouseId) return toast.error('Lütfen bir depo seçiniz.');
     if (!customerName) return toast.error('Lütfen müşteri adını girin.');
+    if (selectedItems.length === 0) return toast.error('Lütfen en az bir ürün ekleyin.');
 
     setIsSubmitting(true);
     try {
       const payload = {
         customerName,
+        orderNote,
         warehouseId,
         items: selectedItems.map(item => ({
           productId: item.productId,
@@ -134,72 +132,80 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
           <div className="bg-white px-6 pt-6 pb-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <ShoppingCart className="h-6 w-6 text-indigo-600" />
-                {step === 1 ? 'Şube/Depo Seçimi' : 'Sipariş Detayları'}
+                Sipariş Simülatörü
               </h3>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-500 p-2 hover:bg-gray-100 rounded-full">
                 <X className="h-6 w-6" />
               </button>
             </div>
 
-            {step === 1 ? (
-              <form onSubmit={handleWarehouseSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Lütfen siparişin karşılanacağı şubeyi seçiniz:
-                  </label>
-                  <div className="grid grid-cols-1 gap-3">
-                    {warehouses.map((wh) => (
-                      <div
-                        key={wh.id}
-                        onClick={() => setWarehouseId(wh.id)}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3 ${
-                          warehouseId === wh.id 
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
-                            : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200'
-                        }`}
-                      >
-                        <Building2 className={`h-5 w-5 ${warehouseId === wh.id ? 'text-indigo-600' : 'text-gray-400'}`} />
-                        <span className="font-medium">{wh.name}</span>
-                      </div>
-                    ))}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div className="space-y-6">
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Şube / Depo Seçimi</label>
+                    <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-1">
+                      {warehouses.map((wh) => (
+                        <div
+                          key={wh.id}
+                          onClick={() => handleWarehouseSelect(wh.id)}
+                          className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                            warehouseId === wh.id 
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
+                              : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Building2 className={`h-4 w-4 ${warehouseId === wh.id ? 'text-indigo-600' : 'text-gray-400'}`} />
+                            <span className="text-sm font-semibold">{wh.name}</span>
+                          </div>
+                          {warehouseId === wh.id && <div className="w-2 h-2 rounded-full bg-indigo-600" />}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Müşteri Bilgisi</label>
+                    <input
+                      type="text"
+                      required
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Müşteri Adı Soyadı"
+                      className="w-full bg-white border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <MessageSquare className="h-3 w-3" />
+                      Sipariş Notu (Opsiyonel)
+                    </label>
+                    <textarea
+                      rows="3"
+                      value={orderNote}
+                      onChange={(e) => setOrderNote(e.target.value)}
+                      placeholder="Sipariş için özel talimatlar, kargo notu vb..."
+                      className="w-full bg-white border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none text-sm resize-none"
+                    />
                   </div>
                 </div>
-                <div className="mt-8 flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={loading || !warehouseId}
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-all"
-                  >
-                    {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'İlerle'}
-                    <ArrowRight className="h-5 w-5" />
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Müşteri Adı */}
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Müşteri Bilgisi</label>
-                  <input
-                    type="text"
-                    required
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Müşteri Ad Soyad / Mağaza Kodu"
-                    className="w-full bg-white border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
 
-                {/* Ürün Ekleme */}
+
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Ürün Listesi</label>
-                    <span className="text-xs text-gray-400 italic">Sadece bu depodaki stoklu ürünler listelenir.</span>
+                    {loading && <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />}
                   </div>
                   
                   <div className="relative">
@@ -207,21 +213,22 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
                       <Package className="h-5 w-5 text-gray-300" />
                     </div>
                     <select
-                      className="block w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm outline-none appearance-none"
+                      disabled={!warehouseId || loading}
+                      className="block w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm outline-none appearance-none disabled:bg-gray-50 disabled:text-gray-400"
                       onChange={(e) => addItem(e.target.value)}
                       value=""
                     >
-                      <option value="">Ürün ara ve ekle...</option>
+                      <option value="">{!warehouseId ? 'Önce depo seçiniz...' : 'Ürün ara ve ekle...'}</option>
                       {availableProducts.map(p => (
                         <option key={p.id} value={p.id}>
-                          {p.name} ({p.sku}) - Mevcut: {p.totalStock}
+                          {p.name} ({p.sku}) - Stok: {p.totalStock}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  {/* Kalemler Tablosu */}
-                  <div className="max-h-[300px] overflow-y-auto border border-gray-100 rounded-xl">
+
+                  <div className="max-h-[350px] overflow-y-auto border border-gray-100 rounded-xl">
                     <table className="min-w-full divide-y divide-gray-100">
                       <thead className="bg-gray-50">
                         <tr>
@@ -241,20 +248,20 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
                           selectedItems.map((item) => (
                             <tr key={item.productId}>
                               <td className="px-4 py-3">
-                                <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                                <p className="text-sm font-semibold text-gray-800 leading-tight">{item.name}</p>
                                 <p className="text-[10px] text-gray-400 font-mono">{item.sku}</p>
                               </td>
                               <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   <input
                                     type="number"
                                     min="1"
                                     max={item.maxStock}
                                     value={item.quantity}
                                     onChange={(e) => updateQuantity(item.productId, e.target.value)}
-                                    className="w-16 border rounded p-1 text-sm font-medium"
+                                    className="w-12 border rounded p-1 text-sm font-medium"
                                   />
-                                  <span className="text-[10px] text-gray-400">/ {item.maxStock}</span>
+                                  <span className="text-[10px] text-gray-400">/{item.maxStock}</span>
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-right">
@@ -273,26 +280,25 @@ export default function OrderModal({ isOpen, onClose, onSuccess }) {
                     </table>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="flex items-center gap-2 text-gray-500 hover:text-gray-700 px-4 py-2"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                    Geri Dön
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || selectedItems.length === 0}
-                    className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : 'Siparişi Kaydet'}
-                  </button>
-                </div>
-              </form>
-            )}
+              <div className="flex justify-end items-center pt-6 border-t border-gray-100">
+                <button
+                  type="submit"
+                  disabled={isSubmitting || selectedItems.length === 0 || !warehouseId}
+                  className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 disabled:opacity-50 flex items-center gap-2 transition-all transform active:scale-95"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="animate-spin h-5 w-5" />
+                      İşleniyor...
+                    </>
+                  ) : (
+                    'Siparişi Onayla ve Gönder'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

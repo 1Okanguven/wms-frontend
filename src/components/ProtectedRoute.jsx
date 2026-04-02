@@ -10,7 +10,6 @@ export const ProtectedRoute = ({ allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    // If not allowed, redirect to a safe page or just home to be handled by main router
     return <Navigate to="/" replace />;
   }
 

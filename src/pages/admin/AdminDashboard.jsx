@@ -28,15 +28,14 @@ export default function AdminDashboard() {
       const response = await api.get('/dashboard/summary');
       const resData = response.data;
       
-      // Backend'den dönen veri yapısı: { overview: {...}, lowStockAlerts: [...] } şeklinde olabiliyor.
-      // Ekrana array objesi basma hatasını önlemek için gelen veriyi destructure edip düzeltiyoruz.
+
       setData({
         totalStock: resData.overview?.totalStock || resData.totalStock || 0,
-        // Kartta sayıyı göstermek için diziyse uzunluğunu alıyoruz:
+
         lowStockAlerts: Array.isArray(resData.lowStockAlerts) ? resData.lowStockAlerts.length : (resData.lowStockAlerts || 0),
         todaysMovements: resData.overview?.todaysMovements || resData.todaysMovements || 0,
         totalWarehouses: resData.overview?.totalWarehouses || resData.totalWarehouses || 0,
-        // Tabloda göstermek için diziyi 'criticalStocks' içine atıyoruz:
+
         criticalStocks: Array.isArray(resData.lowStockAlerts) ? resData.lowStockAlerts : (resData.criticalStocks || [])
       });
     } catch (error) {
@@ -95,7 +94,7 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {/* Stat Cards */}
+
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((item) => (
           <div key={item.name} className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-100 p-5 flex items-center gap-4 transition-transform hover:scale-105">
@@ -110,7 +109,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Critical Stocks Table */}
+
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-8">
         <div className="px-6 py-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
           <h3 className="text-lg font-medium leading-6 text-gray-900 flex items-center gap-2">

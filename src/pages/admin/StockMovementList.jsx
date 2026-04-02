@@ -42,7 +42,7 @@ function MovementBadge({ type }) {
 function formatDateTime(dateString) {
   if (!dateString) return '-';
   try {
-    // Manuel +3 saat ekleme (Türkiye yerel saati için zorunlu kaydırma)
+
     const dateObj = new Date(new Date(dateString).getTime() + 3 * 60 * 60 * 1000);
     return new Intl.DateTimeFormat('tr-TR', { 
       dateStyle: 'short', 
@@ -95,7 +95,7 @@ export default function StockMovementList() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header & Toolbar */}
+
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -107,7 +107,7 @@ export default function StockMovementList() {
           </p>
         </div>
         
-        {/* Search Bar */}
+
         <div className="w-full md:w-72 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
@@ -130,7 +130,7 @@ export default function StockMovementList() {
         </div>
       </div>
 
-      {/* Özet Kartları */}
+
       {!loading && !error && movements.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {Object.entries(MOVEMENT_CONFIG).map(([type, config]) => {
@@ -151,7 +151,7 @@ export default function StockMovementList() {
         </div>
       )}
 
-      {/* Tablo */}
+
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">

@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const decoded = jwtDecode(token);
           setUser(decoded);
-          // Assuming the token payload has 'role' property: e.g. { sub: 1, email: "...", role: "ADMIN" }
+
           setRole(decoded.role || null);
         } catch (error) {
           console.error("Invalid token:", error);

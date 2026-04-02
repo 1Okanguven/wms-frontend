@@ -63,11 +63,11 @@ export default function Receiving() {
   const handleSelectTransfer = (transfer) => {
     const formatDateForInput = (dateStr) => {
       if (!dateStr) return '';
-      // Eğer ISO string geliyorsa (T içeriyorsa), direkt YYYY-MM-DD kısmını al
+
       if (typeof dateStr === 'string' && dateStr.includes('T')) {
         return dateStr.split('T')[0];
       }
-      // Date objesi veya diğer formatlar için yerel tarih bilgisini bozmadan çevir
+
       try {
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return '';
@@ -176,7 +176,7 @@ export default function Receiving() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <PackageCheck className="h-6 w-6 text-emerald-600" />
@@ -188,7 +188,7 @@ export default function Receiving() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form */}
+
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-emerald-50 flex justify-between items-center">
@@ -208,7 +208,7 @@ export default function Receiving() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Ürün */}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Ürün <span className="text-red-500">*</span>
@@ -234,7 +234,7 @@ export default function Receiving() {
                   {isFromTransfer && <p className="mt-1 text-[10px] text-blue-600 italic">* Ürün seçimi kilitlendi.</p>}
                 </div>
 
-                {/* Raf */}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Raf (Lokasyon) <span className="text-red-500">*</span>
@@ -267,7 +267,7 @@ export default function Receiving() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Miktar */}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Miktar <span className="text-red-500">*</span>
@@ -285,7 +285,7 @@ export default function Receiving() {
                   {isFromTransfer && <p className="mt-1 text-[10px] text-blue-600 italic">* Miktar kilitlendi.</p>}
                 </div>
 
-                {/* Lot */}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Lot / Parti</label>
                   <div className="relative">
@@ -358,7 +358,7 @@ export default function Receiving() {
             </form>
           </div>
 
-          {/* Pending Transfers Table */}
+
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-amber-50 flex justify-between items-center">
               <h2 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
@@ -422,30 +422,30 @@ export default function Receiving() {
           </div>
         </div>
 
-        {/* Right Panel */}
-        <div className="space-y-4">
-          {lastSuccess && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="h-5 w-5 text-emerald-600" />
-                <h3 className="text-sm font-semibold text-emerald-800">Son İşlem Başarılı</h3>
+
+          <div className="space-y-4">
+            {lastSuccess && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" />
+                  <h3 className="text-sm font-semibold text-emerald-800">Son İşlem Başarılı</h3>
+                </div>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-500">Ürün:</span><span className="font-medium text-gray-900">{lastSuccess.product}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Raf:</span><span className="font-medium text-gray-900">{lastSuccess.rack}</span></div>
+                  <div className="flex justify-between border-t border-emerald-200 pt-1.5 mt-1.5"><span className="text-gray-500">Miktar:</span><span className="font-bold text-emerald-700">+{lastSuccess.quantity}</span></div>
+                </div>
               </div>
-              <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Ürün:</span><span className="font-medium text-gray-900">{lastSuccess.product}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Raf:</span><span className="font-medium text-gray-900">{lastSuccess.rack}</span></div>
-                <div className="flex justify-between border-t border-emerald-200 pt-1.5 mt-1.5"><span className="text-gray-500">Miktar:</span><span className="font-bold text-emerald-700">+{lastSuccess.quantity}</span></div>
-              </div>
+            )}
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 space-y-2">
+              <p className="font-semibold text-blue-800">Bilgi</p>
+              <ul className="space-y-1 text-[11px] list-disc list-inside">
+                <li>Transfer seçiminde tüm ürün/tarih bilgileri korunur.</li>
+                <li>Raf seçimi sadece hedef depo ile sınırlıdır.</li>
+                <li>İşlem sonrası transfer kaydı otomatik olarak kapanır.</li>
+              </ul>
             </div>
-          )}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 space-y-2">
-            <p className="font-semibold text-blue-800">Bilgi</p>
-            <ul className="space-y-1 text-[11px] list-disc list-inside">
-              <li>Transfer seçiminde tüm ürün/tarih bilgileri korunur.</li>
-              <li>Raf seçimi sadece hedef depo ile sınırlıdır.</li>
-              <li>İşlem sonrası transfer kaydı otomatik olarak kapanır.</li>
-            </ul>
           </div>
-        </div>
       </div>
     </div>
   );

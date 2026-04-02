@@ -72,10 +72,10 @@ export default function AdminLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Hangi menülerin açık olduğunu tutan state
+
   const [openMenus, setOpenMenus] = useState({});
 
-  // Sayfa değiştiğinde, eğer alt (child) bir sayfada isek onun ebeveyn (parent) menüsünü açık tut
+
   useEffect(() => {
     const newOpenMenus = { ...openMenus };
     let hasChanges = false;
@@ -104,7 +104,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar Desktop */}
+
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-gray-900 border-r border-gray-800 transition-all duration-300">
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex items-center h-16 flex-shrink-0 px-4 bg-gray-900 border-b border-gray-800">
@@ -117,7 +117,7 @@ export default function AdminLayout() {
                 const isChildActive = item.children?.some(child => location.pathname.startsWith(child.href));
                 const isOpen = openMenus[item.name];
 
-                // Eğer alt menüsü yoksa statik Link renderla
+
                 if (!item.children) {
                   return (
                     <Link
@@ -137,7 +137,7 @@ export default function AdminLayout() {
                   );
                 }
 
-                // Eğer alt menüsü varsa Dropdown buton renderla
+
                 return (
                   <div key={item.name} className="space-y-1">
                     <button
@@ -161,7 +161,7 @@ export default function AdminLayout() {
                       )}
                     </button>
 
-                    {/* Dropdown contents (Alt linkler) */}
+
                     <div 
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         isOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
@@ -194,9 +194,9 @@ export default function AdminLayout() {
         </div>
       </div>
 
-      {/* Main Content Area */}
+
       <div className="flex-1 flex flex-col md:pl-64">
-        {/* Topbar */}
+
         <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white shadow-sm border-b border-gray-200">
           <button
             type="button"
@@ -224,7 +224,7 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        {/* Page Content */}
+
         <main className="flex-1 bg-gray-50">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">

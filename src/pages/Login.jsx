@@ -25,13 +25,13 @@ export default function Login() {
       const response = await api.post('/auth/login', { email, password });
       const { access_token } = response.data;
       
-      // Update global context & local storage
+
       setAuthStatus(access_token);
       toast.success('Başarıyla giriş yapıldı!');
       
       const decodedInfo = jwtDecode(access_token);
       
-      // Redirect based on role
+
       if (decodedInfo.role === 'ADMIN') {
         navigate('/admin/dashboard', { replace: true });
       } else if (decodedInfo.role === 'WORKER') {
@@ -53,7 +53,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-10 shadow-xl ring-1 ring-gray-900/5">
         
-        {/* Logo and Header */}
+
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 mb-4">
             <Package className="h-8 w-8 text-blue-600" />
@@ -66,11 +66,11 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Login Form */}
+
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">
             
-            {/* Email Input */}
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 E-posta Adresi
@@ -93,7 +93,7 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Password Input */}
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Şifre

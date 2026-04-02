@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, Plus, Package, MapPin, CheckCircle2, ChevronRight, Loader2, Warehouse, Search } from 'lucide-react';
+import { ClipboardList, Plus, Package, MapPin, CheckCircle2, ChevronRight, Loader2, Warehouse, Search, MessageSquare } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import OrderModal from '../../components/orders/OrderModal';
+import LocationBadge from '../../components/common/LocationBadge';
 
 export default function PickingLists() {
   const [pickLists, setPickLists] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('ALL');
-  const [warehouses, setWarehouses] = useState([]);
+
 
   const fetchData = async () => {
     try {
@@ -53,7 +55,7 @@ export default function PickingLists() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -69,11 +71,11 @@ export default function PickingLists() {
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-100 font-semibold"
         >
           <Plus className="h-5 w-5" />
-          Yeni Sipariş Oluştur
+          Sipariş Simülatörü (Test)
         </button>
       </div>
 
-      {/* Filters */}
+
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
           <Warehouse className="h-4 w-4" />
@@ -118,7 +120,7 @@ export default function PickingLists() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {pendingLists.map((pl) => (
             <div key={pl.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
-              {/* Card Header */}
+
               <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
@@ -137,7 +139,7 @@ export default function PickingLists() {
                 </div>
               </div>
 
-              {/* Card Body */}
+
               <div className="px-6 py-4 flex-1">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-bold text-gray-400 uppercase">Toplanacak Ürünler</span>
@@ -153,10 +155,9 @@ export default function PickingLists() {
                         <div>
                           <p className="text-sm font-semibold text-gray-800 leading-tight">{item.product?.name}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
-                              <MapPin className="h-3 w-3" />
-                              {item.sourceRack?.name}
-                            </span>
+                            <LocationBadge 
+                              locationCode={item.sourceRack?.locationCode || item.sourceRack?.name} 
+                            />
                             <span className="text-[10px] text-gray-300">|</span>
                             <span className="text-[10px] text-indigo-500 font-mono italic">{item.product?.sku}</span>
                           </div>
@@ -167,8 +168,21 @@ export default function PickingLists() {
                       </div>
                     </div>
                   ))}
+
+
+                  {pl.order?.orderNote && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mt-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <MessageSquare className="h-3.5 w-3.5 text-amber-600" />
+                        <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Sipariş Notu</span>
+                      </div>
+                      <p className="text-xs text-amber-900 font-medium italic">
+                        "{pl.order.orderNote}"
+                      </p>
+                    </div>
+                  )}
                   
-                  {/* Customer Info */}
+
                   <div className="mt-6 pt-4 border-t border-gray-50 flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
                       <Search className="w-3 h-3 text-gray-400" />
@@ -178,7 +192,7 @@ export default function PickingLists() {
                 </div>
               </div>
 
-              {/* Card Footer */}
+
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
                 <button
                   onClick={() => handleCompletePick(pl.id)}
@@ -194,7 +208,7 @@ export default function PickingLists() {
         </div>
       )}
 
-      {/* Done Header */}
+
       {completedLists.length > 0 && (
         <div className="pt-10">
           <div className="flex items-center gap-4 mb-6">
