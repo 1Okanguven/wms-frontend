@@ -17,7 +17,6 @@ import StockMovementList from './pages/admin/StockMovementList';
 import Receiving from './pages/admin/Receiving';
 import Shipping from './pages/admin/Shipping';
 import PickingLists from './pages/admin/PickingLists';
-import WorkerTasks from './pages/worker/Tasks';
 
 
 const Placeholder = ({ title }) => (
@@ -46,7 +45,7 @@ export default function App() {
       } />
       
 
-      <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+      <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'WORKER']} />}>
         <Route element={<AdminLayout />}>
           
           <Route path="dashboard" element={<AdminDashboard />} />
@@ -74,23 +73,18 @@ export default function App() {
           <Route path="shipping" element={<Shipping />} />
           
 
-          <Route path="users" element={<Placeholder title="Çalışanlar" />} />
-          <Route path="roles" element={<Placeholder title="Roller & Yetkiler" />} />
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="users" element={<Placeholder title="Çalışanlar" />} />
+            <Route path="roles" element={<Placeholder title="Roller & Yetkiler" />} />
+          </Route>
 
         </Route>
       </Route>
       
 
-      <Route path="/worker" element={<ProtectedRoute allowedRoles={['WORKER']} />}>
-        <Route path="tasks" element={<WorkerTasks />} />
-      </Route>
-
-
       <Route path="/" element={
         !isAuthenticated ? <Navigate to="/login" replace /> :
-        role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> :
-        role === 'WORKER' ? <Navigate to="/worker/tasks" replace /> :
-        <Navigate to="/login" replace />
+        <Navigate to="/admin/dashboard" replace />
       } />
       
 

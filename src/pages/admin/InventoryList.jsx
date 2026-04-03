@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Package, X, Building2, Tags, ChevronDown, Search, Barcode, Hash } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ActionButton from '../../components/common/ActionButton';
 
@@ -14,19 +15,58 @@ const SKU_PREFIX_MAP = {
 };
 
 const generateSkuPrefix = (categoryName) => {
-  if (!categoryName) return '';
+  if (!categoryName) return 'PRD';
+  
+  // 1. Metin Temizliği: Türkçe karakter çevrimi ve noktalama temizliği
   const charMap = {
     'ç': 'c', 'ğ': 'g', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'ş': 's', 'ü': 'u',
     'Ç': 'C', 'Ğ': 'G', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U'
   };
-  let processed = categoryName.split('').map(char => charMap[char] || char).join('').toUpperCase();
-  if (SKU_PREFIX_MAP[processed]) return SKU_PREFIX_MAP[processed];
-  let consonants = processed.replace(/[AEIOU]/g, '');
-  if (consonants.length >= 3) return consonants.substring(0, 3);
-  return processed.substring(0, 3);
+  
+  let cleaned = categoryName
+    .split('')
+    .map(char => charMap[char] || char)
+    .join('')
+    .toUpperCase()
+    .replace(/[,.&]/g, ' ')
+    .trim();
+
+  const words = cleaned.split(/\s+/).filter(w => w.length > 0);
+
+  // Durum A: 3 veya Daha Fazla Kelime
+  if (words.length >= 3) {
+    return words.slice(0, 3).map(w => w[0]).join('');
+  }
+
+  // Durum B: 1 veya 2 Kelime
+  const combined = words.join('');
+  if (combined.length === 0) return 'PRD';
+
+  let result = combined[0];
+  let vowelCount = 'AEIOU'.includes(result) ? 1 : 0;
+
+  for (let i = 1; i < combined.length && result.length < 3; i++) {
+    const char = combined[i];
+    const isVowel = 'AEIOU'.includes(char);
+
+    if (!isVowel) {
+      result += char;
+    } else if (vowelCount < 1) { // Maksimum 1 sesli harf kuralı
+      result += char;
+      vowelCount++;
+    }
+  }
+
+  // 3 karaktere tamamla
+  while (result.length < 3) {
+    result += 'X';
+  }
+
+  return result;
 };
 
 export default function InventoryList() {
+  const { role } = useAuth();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -45,6 +85,7 @@ export default function InventoryList() {
     unit: 'ADET',
     hasExpiration: false
   });
+  const [barcodeError, setBarcodeError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchData = async () => {
@@ -83,6 +124,7 @@ export default function InventoryList() {
 
   const handleEdit = (item) => {
     setEditItem(item);
+    setBarcodeError('');
     setFormData({
       sku: item.sku || '',
       name: item.name || '',
@@ -98,6 +140,7 @@ export default function InventoryList() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditItem(null);
+    setBarcodeError('');
     setFormData({
       sku: '', name: '', barcode: '',
       categoryId: '', companyId: '', unit: 'ADET', hasExpiration: false
@@ -119,7 +162,14 @@ export default function InventoryList() {
   const handleInputChange = (e) => {
     let { name, value, type, checked } = e.target;
     
-    if (name === 'barcode') value = value.replace(/\D/g, '').substring(0, 13);
+    if (name === 'barcode') {
+       value = value.replace(/\D/g, '').substring(0, 13);
+       if (value && value.length !== 13) {
+         setBarcodeError('Barkod tam olarak 13 haneli rakamlardan oluşmalıdır.');
+       } else {
+         setBarcodeError('');
+       }
+    }
     if (name === 'sku') value = value.toUpperCase().replace(/\s+/g, '-');
 
     setFormData(prev => {
@@ -127,7 +177,9 @@ export default function InventoryList() {
       if (name === 'categoryId' && !editItem) {
         const selectedCat = categories.find(c => c.id === value);
         if (selectedCat) {
-          nextData.sku = `${generateSkuPrefix(selectedCat.name)}-`;
+          const prefix = generateSkuPrefix(selectedCat.name);
+          const randomNum = Math.floor(1000 + Math.random() * 9000);
+          nextData.sku = `${prefix}-${randomNum}`;
         }
       }
       return nextData;
@@ -136,6 +188,14 @@ export default function InventoryList() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // EAN-13 Validation
+    if (formData.barcode && formData.barcode.length !== 13) {
+      setBarcodeError('Barkod tam olarak 13 haneli rakamlardan oluşmalıdır.');
+      toast.error('Barkod hatası!');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       if (editItem) {
@@ -161,13 +221,18 @@ export default function InventoryList() {
           <Package className="h-8 w-8 text-emerald-600" />
           Ürün Katalogu
         </h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg font-semibold"
-        >
-          <Plus className="h-5 w-5" />
-          Yeni Ürün Ekle
-        </button>
+        {role !== 'WORKER' && (
+                        <button
+            onClick={() => {
+              setBarcodeError('');
+              setIsModalOpen(true);
+            }}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg font-bold"
+          >
+            <Plus className="h-5 w-5" />
+            Yeni Ürün Ekle
+          </button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
@@ -279,7 +344,16 @@ export default function InventoryList() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Barkod (EAN-13)</label>
-                      <input type="text" name="barcode" maxLength={13} value={formData.barcode} onChange={handleInputChange} className="block w-full rounded-lg border-gray-300 py-2.5 text-sm border focus:ring-emerald-500" placeholder="869..." />
+                      <input 
+                        type="text" 
+                        name="barcode" 
+                        maxLength={13} 
+                        value={formData.barcode} 
+                        onChange={handleInputChange} 
+                        className={`block w-full rounded-lg border-gray-300 py-2.5 text-sm border focus:ring-emerald-500 ${barcodeError ? 'border-red-500 ring-red-500' : ''}`} 
+                        placeholder="869..." 
+                      />
+                      {barcodeError && <p className="mt-1 text-xs text-red-500 font-medium">{barcodeError}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Ölçü Birimi</label>

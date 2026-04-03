@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Layers, X, Columns, ChevronDown, Search, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ActionButton from '../../components/common/ActionButton';
 import LocationBadge from '../../components/common/LocationBadge';
 
 export default function RackList() {
+  const { role } = useAuth();
   const [items, setItems] = useState([]);
   const [parents, setParents] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -119,8 +121,10 @@ export default function RackList() {
       const aisle = parents.find(p => p.id === next.aisleId);
       if (aisle && next.code) {
         next.locationCode = `${aisle.locationCode}-${next.code}`;
+        next.barcode = `LOC-${next.locationCode}`; // Live preview for automated barcode
       } else {
         next.locationCode = '';
+        next.barcode = '';
       }
       
       return next;
@@ -137,8 +141,8 @@ export default function RackList() {
       const payload = {
         name: formData.name,
         code: formData.code,
-        barcode: formData.barcode,
         aisleId: formData.aisleId
+        // Barcode is now automated on backend, sending it is optional but showing it in UI is good
       };
       
       if (editItem) {
@@ -165,13 +169,15 @@ export default function RackList() {
           <Layers className="h-8 w-8 text-emerald-600" />
           Raf Yönetimi
         </h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg font-semibold"
-        >
-          <Plus className="h-5 w-5" />
-          Yeni Raf Ekle
-        </button>
+        {role !== 'WORKER' && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg font-semibold"
+          >
+            <Plus className="h-5 w-5" />
+            Yeni Raf Ekle
+          </button>
+        )}
       </div>
 
 
@@ -402,17 +408,18 @@ export default function RackList() {
                       </div>
                       <div>
                         <label htmlFor="barcode" className="block text-sm font-medium text-gray-700 mb-1">
-                          Raf Barkodu (Opsiyonel)
+                          Raf Barkodu
                         </label>
                         <input
                           type="text"
                           name="barcode"
                           id="barcode"
+                          readOnly
                           value={formData.barcode}
-                          onChange={handleInputChange}
-                          className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2.5 border"
-                          placeholder="Barkod okutun veya yazın"
+                          className="block w-full rounded-lg border-gray-200 bg-gray-50 cursor-not-allowed shadow-none focus:ring-0 sm:text-sm p-2.5 border font-mono text-gray-400"
+                          placeholder="Otomatik üretilir..."
                         />
+                        <span className="text-[10px] text-gray-400 mt-1 block italic">Barkod sistem tarafından otomatik üretilir.</span>
                       </div>
                     </div>
                   </div>

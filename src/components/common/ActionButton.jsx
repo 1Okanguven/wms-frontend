@@ -1,12 +1,21 @@
 import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * ActionButton Component
  * Standardized edit and delete actions for tables.
- * Can be easily extended for Role-Based Access Control (RBAC).
+ * Integrated with RBAC: Hidden for WORKER role.
  */
 export default function ActionButton({ onEdit, onDelete, editTitle = "Düzenle", deleteTitle = "Sil" }) {
+  const { role } = useAuth();
+
+  // If user is a WORKER, these actions should not be visible in Master Data contexts.
+  // In WMS, Master Data is read-only for workers.
+  if (role === 'WORKER') {
+    return null;
+  }
+
   return (
     <div className="flex items-center justify-end gap-2">
       {onEdit && (

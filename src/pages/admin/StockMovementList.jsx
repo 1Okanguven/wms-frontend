@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Activity, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Package, Search } from 'lucide-react';
+import { Activity, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Package, Search, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 
 const MOVEMENT_CONFIG = {
@@ -9,9 +9,14 @@ const MOVEMENT_CONFIG = {
     icon: <ArrowDownCircle className="h-3.5 w-3.5" />,
   },
   OUT: {
-    label: 'Çıkış',
-    className: 'bg-red-50 text-red-700 ring-1 ring-red-200',
-    icon: <ArrowUpCircle className="h-3.5 w-3.5" />,
+    label: 'FİRE / ZAYİ',
+    className: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
+    icon: <AlertTriangle className="h-3.5 w-3.5" />,
+  },
+  WASTE: {
+    label: 'FİRE / ZAYİ',
+    className: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
+    icon: <AlertTriangle className="h-3.5 w-3.5" />,
   },
   SHIPMENT: {
     label: 'Sevkiyat',
@@ -133,8 +138,10 @@ export default function StockMovementList() {
 
       {!loading && !error && movements.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {Object.entries(MOVEMENT_CONFIG).map(([type, config]) => {
-            const count = movements.filter(m => m.type === type).length;
+          {Object.entries(MOVEMENT_CONFIG)
+            .filter(([type]) => type !== 'WASTE')
+            .map(([type, config]) => {
+            const count = movements.filter(m => m.type === type || (type === 'OUT' && m.type === 'WASTE')).length;
             return (
               <div key={type} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -281,6 +288,8 @@ export default function StockMovementList() {
                           ? 'bg-emerald-50 text-emerald-700'
                           : movement.type === 'TRANSFER'
                           ? 'bg-blue-50 text-blue-700'
+                          : movement.type === 'WASTE' || movement.type === 'OUT'
+                          ? 'bg-rose-50 text-rose-700'
                           : 'bg-red-50 text-red-700'
                       }`}>
                         {movement.type === 'IN' ? '+' : movement.type === 'TRANSFER' ? '↔' : '-'}

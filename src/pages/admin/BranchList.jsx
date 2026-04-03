@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Building, X, Building2, ChevronDown, Search, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ActionButton from '../../components/common/ActionButton';
 
 export default function BranchList() {
+  const { role } = useAuth();
   const [items, setItems] = useState([]);
   const [parents, setParents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,13 +127,15 @@ export default function BranchList() {
           <Building className="h-8 w-8 text-emerald-600" />
           Şube Yönetimi
         </h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg font-semibold"
-        >
-          <Plus className="h-5 w-5" />
-          Yeni Şube Ekle
-        </button>
+        {role !== 'WORKER' && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg font-semibold"
+          >
+            <Plus className="h-5 w-5" />
+            Yeni Şube Ekle
+          </button>
+        )}
       </div>
 
 

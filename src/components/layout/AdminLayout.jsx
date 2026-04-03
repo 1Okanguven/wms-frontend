@@ -112,83 +112,85 @@ export default function AdminLayout() {
           </div>
           <div className="flex-1 flex flex-col overflow-y-auto wms-scrollbar custom-scrollbar">
             <nav className="flex-1 px-3 py-4 space-y-2">
-              {navigation.map((item) => {
-                const isActive = item.href ? location.pathname.startsWith(item.href) : false;
-                const isChildActive = item.children?.some(child => location.pathname.startsWith(child.href));
-                const isOpen = openMenus[item.name];
+              {navigation
+                .filter(item => {
+                  if (user?.role === 'WORKER' && item.name === 'Organizasyon') return false;
+                  return true;
+                })
+                .map((item) => {
+                  const isActive = item.href ? location.pathname.startsWith(item.href) : false;
+                  const isChildActive = item.children?.some(child => location.pathname.startsWith(child.href));
+                  const isOpen = openMenus[item.name];
 
-
-                if (!item.children) {
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className={`${
-                        isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                      } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors`}
-                    >
-                      <item.icon
+                  if (!item.children) {
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
                         className={`${
-                          isActive ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-400'
-                        } mr-3 flex-shrink-0 h-5 w-5 transition-colors`}
-                      />
-                      {item.name}
-                    </Link>
-                  );
-                }
-
-
-                return (
-                  <div key={item.name} className="space-y-1">
-                    <button
-                      onClick={() => toggleMenu(item.name)}
-                      className={`${
-                        isChildActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                      } w-full group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors focus:outline-none`}
-                    >
-                      <div className="flex items-center">
+                          isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                        } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors`}
+                      >
                         <item.icon
-                           className={`${
-                             isChildActive ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-400'
-                           } mr-3 flex-shrink-0 h-5 w-5 transition-colors`}
+                          className={`${
+                            isActive ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-400'
+                          } mr-3 flex-shrink-0 h-5 w-5 transition-colors`}
                         />
                         {item.name}
-                      </div>
-                      {isOpen ? (
-                        <ChevronDown className="ml-2 h-4 w-4 text-gray-500 transition-transform" />
-                      ) : (
-                        <ChevronRight className="ml-2 h-4 w-4 text-gray-500 transition-transform" />
-                      )}
-                    </button>
+                      </Link>
+                    );
+                  }
 
+                  return (
+                    <div key={item.name} className="space-y-1">
+                      <button
+                        onClick={() => toggleMenu(item.name)}
+                        className={`${
+                          isChildActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                        } w-full group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors focus:outline-none`}
+                      >
+                        <div className="flex items-center">
+                          <item.icon
+                             className={`${
+                               isChildActive ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-400'
+                             } mr-3 flex-shrink-0 h-5 w-5 transition-colors`}
+                          />
+                          {item.name}
+                        </div>
+                        {isOpen ? (
+                          <ChevronDown className="ml-2 h-4 w-4 text-gray-500 transition-transform" />
+                        ) : (
+                          <ChevronRight className="ml-2 h-4 w-4 text-gray-500 transition-transform" />
+                        )}
+                      </button>
 
-                    <div 
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
-                      }`}
-                    >
-                      <div className="space-y-1 pl-10 pr-2">
-                        {item.children.map(child => {
-                          const isCurrentChildActive = location.pathname.startsWith(child.href);
-                          return (
-                            <Link
-                              key={child.name}
-                              to={child.href}
-                              className={`${
-                                isCurrentChildActive
-                                  ? 'bg-blue-600/10 text-white border-l-2 border-blue-500 shadow-sm'
-                                  : 'text-gray-400 hover:bg-gray-800 hover:text-white border-l-2 border-transparent'
-                              } group flex items-center pl-3 pr-2 py-2 text-sm font-medium rounded-r-md transition-all`}
-                            >
-                              {child.name}
-                            </Link>
-                          );
-                        })}
+                      <div 
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                          isOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                        }`}
+                      >
+                        <div className="space-y-1 pl-10 pr-2">
+                          {item.children.map(child => {
+                            const isCurrentChildActive = location.pathname.startsWith(child.href);
+                            return (
+                              <Link
+                                key={child.name}
+                                to={child.href}
+                                className={`${
+                                  isCurrentChildActive
+                                    ? 'bg-blue-600/10 text-white border-l-2 border-blue-500 shadow-sm'
+                                    : 'text-gray-400 hover:bg-gray-800 hover:text-white border-l-2 border-transparent'
+                                } group flex items-center pl-3 pr-2 py-2 text-sm font-medium rounded-r-md transition-all`}
+                              >
+                                {child.name}
+                              </Link>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </nav>
           </div>
         </div>
